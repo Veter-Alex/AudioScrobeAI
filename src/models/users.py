@@ -5,10 +5,14 @@
 """
 
 from __future__ import annotations
-from sqlalchemy import Column, Integer, String, Boolean
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from src.database import Base
+
 from typing import List
+
+from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from src.database import Base
+
 
 class User(Base):
     """
@@ -21,6 +25,7 @@ class User(Base):
         is_admin: Флаг администратора.
         audio_files: Связанные аудиофайлы (обратная связь).
     """
+
     __tablename__ = "users"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -40,6 +45,7 @@ class User(Base):
             password: Пароль в открытом виде.
         """
         from passlib.hash import bcrypt
+
         self.password_hash = bcrypt.hash(password)
 
     def verify_password(self, password: str) -> bool:
@@ -53,4 +59,5 @@ class User(Base):
             bool: True если пароль верный.
         """
         from passlib.hash import bcrypt
-        return bcrypt.verify(password, self.password_hash)
+
+        return bool(bcrypt.verify(password, self.password_hash))

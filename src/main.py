@@ -5,11 +5,14 @@
 транскрибации, переводов и суммаризации с использованием AI моделей.
 """
 
-from fastapi import FastAPI, Depends
-from sqlalchemy.orm import Session
-from typing import List
-from src.database import engine, get_db, Base
-from src.models import User
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from src.database import Base, engine, ensure_application_ready
+from src.routers import api_router
+
+# Проверка готовности приложения перед запуском
+ensure_application_ready()
 
 # Создание всех таблиц в базе данных на основе моделей
 Base.metadata.create_all(bind=engine)
@@ -18,9 +21,25 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="AudioScrobeAI",
     description="Backend для обработки аудиофайлов с использованием AI",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
+# Настройка CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # В продакшене указать конкретные origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Подключение API роутеров
+app.include_router(api_router, prefix="/api/v1")
+
+
+# Корневой эндпоинт
 @app.get("/")
 async def root() -> dict[str, str]:
     """
@@ -29,28 +48,18 @@ async def root() -> dict[str, str]:
     Returns:
         dict: Приветственное сообщение.
     """
-    return {"message": "Welcome to AudioScrobeAI"}
+    return {"message": "Welcome to AudioScrobeAI API"}
 
+
+# Эндпоинт для обратной совместимости
 @app.get("/health")
-async def health() -> dict[str, str]:
+async def legacy_health() -> dict[str, str]:
     """
-    Эндпоинт для проверки здоровья приложения.
+    Устаревший эндпоинт здоровья для обратной совместимости.
 
-    Returns:
-        dict: Статус приложения.
+    Рекомендуется использовать /api/v1/health/
     """
-    return {"status": "ok"}
-
-@app.get("/users")
-async def get_users(db: Session = Depends(get_db)) -> List[User]:
-    """
-    Получение списка всех пользователей.
-
-    Args:
-        db: Сессия базы данных.
-
-    Returns:
-        List[User]: Список пользователей.
-    """
-    users = db.query(User).all()
-    return users
+    return {
+        "status": "ok",
+        "message": "Используйте /api/v1/health/ для подробной информации",
+    }

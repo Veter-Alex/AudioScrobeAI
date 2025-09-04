@@ -107,3 +107,51 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# =============================================================================
+# ДОПОЛНИТЕЛЬНЫЕ НАСТРОЙКИ ДЛЯ ПРОЕКТА AudioScrobeAI
+# =============================================================================
+
+# Docker
+.dockerignore
+
+# Логи приложения
+logs/
+*.log
+
+# Временные файлы
+tmp/
+temp/
+
+# Файлы базы данных (если используются локальные)
+*.db
+*.sqlite
+*.sqlite3
+
+# Загруженные аудио файлы (для тестирования)
+uploads/
+audio_files/
+
+# Кэш и временные данные
+.cache/
+.tmp/
+
+# VS Code
+.vscode/settings.json
+.vscode/launch.json
+
+# Alembic migrations (если нужно игнорировать версии)
+# alembic/versions/*.py  # Раскомментируйте, если хотите игнорировать версии миграций
+
+# Секретные ключи и конфиги
+secrets/
+config/local_config.py
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
