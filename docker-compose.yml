@@ -37,6 +37,7 @@ services:
       APP_ENV: ${APP_ENV}
     volumes:
       - .:/app
+      - ./storage:/app/storage
 
 volumes:
   postgres_data:
