@@ -9,12 +9,12 @@ import logging
 import os
 import subprocess
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from sqlalchemy import inspect, text
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.database import Base, engine, get_db
+from src.database import Base, engine
 from src.models.users import User
 
 # Настройка логирования
@@ -223,7 +223,7 @@ class ApplicationHealthChecker:
                 # Проверяем существование superadmin пользователя
                 superadmin = (
                     session.query(User)
-                    .filter(User.username == "superadmin", User.is_admin == True)
+                    .filter(User.username == "superadmin", User.is_admin)
                     .first()
                 )
 

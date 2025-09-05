@@ -5,11 +5,11 @@
 """
 
 from __future__ import annotations
-from sqlalchemy import Integer, String, Float, DateTime, Enum, ForeignKey
+from sqlalchemy import Integer, String, Float, DateTime, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
-from typing import Optional, List
+from typing import Optional
 from src.models.enums import Status, StatusType
 
 class AudioFile(Base):

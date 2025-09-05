@@ -6,7 +6,7 @@
 """
 
 from __future__ import annotations
-from sqlalchemy import Column, Integer, String, Enum as SAEnum
+from sqlalchemy import Integer, String, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import ARRAY
 from typing import List

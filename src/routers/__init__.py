@@ -6,11 +6,12 @@
 
 from fastapi import APIRouter
 
+# Импортируем все роутеры
+from . import audio_files, auth, health, summaries, transcriptions, translations, users
+
+
 # Создаем базовый роутер для группировки всех API роутеров
 api_router = APIRouter()
-
-# Импортируем и регистрируем все роутеры
-from . import audio_files, auth, health, summaries, transcriptions, translations, users
 
 # Включаем роутеры в основной API роутер
 api_router.include_router(health.router, prefix="/health", tags=["health"])

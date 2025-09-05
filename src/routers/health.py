@@ -7,10 +7,9 @@
 
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from fastapi import APIRouter
 
-from src.database import ApplicationHealthChecker, get_db
+from src.database import ApplicationHealthChecker
 
 # Создаем роутер для health эндпоинтов
 router = APIRouter()
