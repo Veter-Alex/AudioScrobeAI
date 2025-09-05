@@ -7,12 +7,12 @@ TranslationRead — схема вывода результатов перево�
 
 from __future__ import annotations
 
-from typing import Optional, Literal
+from typing import Optional
 
 from pydantic import BaseModel, Field
 
 
-ProcessingStatusLiteral = Literal["pending", "in_progress", "completed", "failed"]
+from .common import ProcessingStatusLiteral
 
 
 class TranslationCreate(BaseModel):

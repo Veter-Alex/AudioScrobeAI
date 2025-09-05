@@ -7,9 +7,9 @@ AIModelRead — схема для вывода метаданных модели
 
 from __future__ import annotations
 
-from typing import List, Literal
+from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 
 OperationLiteral = Literal["transcription", "translation", "summary"]
@@ -19,14 +19,15 @@ class AIModelCreate(BaseModel):
         """Схема регистрации AI-модели.
 
         Поля:
-            model_name: человекочитаемое имя модели.
-            model_path: путь (или идентификатор) к ресурсу модели.
-            operations: список поддерживаемых операций (непустой).
+                model_name: человекочитаемое имя модели.
+                model_path: путь (или идентификатор) к ресурсу модели.
+                operation: единственная поддерживаемая операция модели —
+                        либо "transcription", либо "translation", либо "summary".
         """
 
         model_name: str
         model_path: str
-        operations: List[OperationLiteral] = Field(..., min_length=1)
+        operation: OperationLiteral
 
 
 class AIModelRead(BaseModel):
@@ -40,4 +41,4 @@ class AIModelRead(BaseModel):
         id: int
         model_name: str
         model_path: str
-        operations: List[OperationLiteral]
+        operation: OperationLiteral

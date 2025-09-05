@@ -136,11 +136,13 @@ async def create_summary(
         raise HTTPException(status_code=404, detail="Транскрибация не найдена")
 
     # Создаем сводку
-    db_summary = Summary(
-        transcription_id=summary_data.transcription_id,
-        summary_type=summary_data.summary_type,
-        status=ProcessingStatus.PENDING,
-    )
+    db_summary = Summary()
+    db_summary.summary_type = summary_data.summary_type
+    db_summary.status = ProcessingStatus.PENDING
+
+    # link to transcription by id
+    db_summary.transcription_id = summary_data.transcription_id
+    db_summary.translation_id = None
 
     db.add(db_summary)
     db.commit()
@@ -184,7 +186,6 @@ async def update_summary(
         summary.key_points = key_points
     if confidence is not None:
         summary.confidence = confidence
-    summary.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(summary)

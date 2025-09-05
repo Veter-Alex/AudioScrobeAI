@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import Integer, String, Float, ForeignKey
+from sqlalchemy import Integer, String, Float, ForeignKey, DateTime
+from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.models.enums import ProcessingStatus, ProcessingStatusType
@@ -16,6 +17,7 @@ from src.models.enums import ProcessingStatus, ProcessingStatusType
 if TYPE_CHECKING:
     from src.models.transcriptions import Transcription
     from src.models.ai_models import AIModel
+    from src.models.summaries import Summary
 
 class Translation(Base):
     """
@@ -47,8 +49,29 @@ class Translation(Base):
     end_time: Mapped[float] = mapped_column(Float)  # in seconds
     status: Mapped[ProcessingStatus] = mapped_column(ProcessingStatusType)
     error_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # Timestamps and optional confidence and translated text fields
+    created_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    # Note: do not provide convenience properties for translated_text/target_language here.
+    # Use explicit columns `text_translation_en`/`text_translation_ru` and a transient
+    # attribute `_requested_target_language` when needed at runtime.
 
     # Relationships
-    transcription: Mapped["Transcription"] = relationship("Transcription", back_populates="translations")
-    ai_model: Mapped["AIModel"] = relationship("AIModel", back_populates="translations")
-    summaries = relationship("Summary", back_populates="translation")
+    transcription: Mapped["Transcription"] = relationship(
+        "Transcription",
+        back_populates="translations",
+    )
+    ai_model: Mapped["AIModel"] = relationship(
+        "AIModel",
+        back_populates="translations",
+    )
+    summaries: Mapped[list["Summary"]] = relationship(
+        "Summary",
+        back_populates="translation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+    # no additional compatibility properties

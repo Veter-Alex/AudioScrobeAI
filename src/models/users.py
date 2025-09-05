@@ -9,8 +9,12 @@ from __future__ import annotations
 
 from sqlalchemy import Boolean, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from typing import TYPE_CHECKING
 
 from src.database import Base
+
+if TYPE_CHECKING:
+    from src.models.audio_files import AudioFile
 
 
 class User(Base):
@@ -34,7 +38,10 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Relationships
-    audio_files = relationship("AudioFile", back_populates="user")
+    # DB uses ON DELETE SET NULL for audio_files.user_id, let DB handle deletes
+    audio_files: Mapped[list["AudioFile"]] = relationship(
+        "AudioFile", back_populates="user", passive_deletes=True
+    )
 
     def set_password(self, password: str) -> None:
         """
@@ -43,9 +50,9 @@ class User(Base):
         Args:
             password: Пароль в открытом виде.
         """
-        from passlib.hash import bcrypt
+        from src.utils.security import hash_password
 
-        self.password_hash = bcrypt.hash(password)
+        self.password_hash = hash_password(password)
 
     def verify_password(self, password: str) -> bool:
         """
@@ -57,6 +64,6 @@ class User(Base):
         Returns:
             bool: True если пароль верный.
         """
-        from passlib.hash import bcrypt
+        from src.utils.security import verify_password
 
-        return bool(bcrypt.verify(password, self.password_hash))
+        return verify_password(password, self.password_hash)

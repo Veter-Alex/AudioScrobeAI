@@ -137,11 +137,11 @@ async def create_transcription(
         raise HTTPException(status_code=404, detail="Аудиофайл не найден")
 
     # Создаем транскрибацию
-    db_transcription = Transcription(
-        audio_file_id=transcription_data.audio_file_id,
-        language=transcription_data.language,
-        status=ProcessingStatus.PENDING,
-    )
+    # Create transcription via attribute assignment
+    db_transcription = Transcription()
+    db_transcription.audio_file_id = transcription_data.audio_file_id
+    db_transcription.language = transcription_data.language
+    db_transcription.status = ProcessingStatus.PENDING
 
     db.add(db_transcription)
     db.commit()
@@ -183,7 +183,6 @@ async def update_transcription(
     transcription.status = ProcessingStatus.COMPLETED
     if confidence is not None:
         transcription.confidence = confidence
-    transcription.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(transcription)

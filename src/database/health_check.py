@@ -128,7 +128,12 @@ class ApplicationHealthChecker:
             existing_tables = inspector.get_table_names()
 
             # Получаем список таблиц из моделей SQLAlchemy
-            expected_tables = [table.__tablename__ for table in Base.__subclasses__()]
+            # Some Base subclasses may not be direct ORM mapped classes; filter those with __tablename__
+            expected_tables = [
+                table.__tablename__
+                for table in Base.__subclasses__()
+                if hasattr(table, "__tablename__")
+            ]
 
             # Добавляем таблицы из других модулей, если они есть
             additional_tables: List[str] = []  # Например: ['alembic_version']
@@ -241,7 +246,10 @@ class ApplicationHealthChecker:
 
                 # Создаем нового superadmin пользователя
                 logger.info("Создаем пользователя superadmin...")
-                new_superadmin = User(username="superadmin", is_admin=True)
+                # Create User without passing unexpected kwargs to avoid mypy/call-arg issues
+                new_superadmin = User()
+                new_superadmin.username = "superadmin"
+                new_superadmin.is_admin = True
                 new_superadmin.set_password("superadmin")
 
                 session.add(new_superadmin)

@@ -12,6 +12,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from src.database import get_db
+from src.services.user_service import UserService
 from src.models.users import User
 
 # Создаем роутер для users эндпоинтов
@@ -100,21 +101,11 @@ async def create_user(user: UserCreate, db: Session = Depends(get_db)) -> User:
         HTTPException: Если пользователь с таким именем уже существует.
     """
     # Проверяем, существует ли пользователь с таким именем
-    db_user = db.query(User).filter(User.username == user.username).first()
-    if db_user:
-        raise HTTPException(
-            status_code=400, detail="Пользователь с таким именем уже существует"
-        )
-
-    # Создаем нового пользователя
-    db_user = User(username=user.username, is_admin=user.is_admin)
-    db_user.set_password(user.password)
-
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-
-    return db_user
+    try:
+        created = UserService.create_user(db, username=user.username, password=user.password, is_admin=bool(user.is_admin))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Пользователь с таким именем уже существует")
+    return created
 
 
 @router.put("/{user_id}", response_model=UserResponse)
@@ -135,19 +126,11 @@ async def update_user(
     Raises:
         HTTPException: Если пользователь не найден.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    try:
+        updated = UserService.update_user(db, user_id=user_id, username=user_update.username, is_admin=user_update.is_admin)
+    except LookupError:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    # Обновляем данные
-    user.username = user_update.username
-    if user_update.is_admin is not None:
-        user.is_admin = user_update.is_admin
-
-    db.commit()
-    db.refresh(user)
-
-    return user
+    return updated
 
 
 @router.delete("/{user_id}")
@@ -165,11 +148,8 @@ async def delete_user(user_id: int, db: Session = Depends(get_db)) -> dict:
     Raises:
         HTTPException: Если пользователь не найден.
     """
-    user = db.query(User).filter(User.id == user_id).first()
-    if user is None:
+    try:
+        UserService.delete_user(db, user_id=user_id)
+    except LookupError:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
-
-    db.delete(user)
-    db.commit()
-
     return {"message": "Пользователь успешно удален"}

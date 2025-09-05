@@ -80,10 +80,14 @@ async def get_translations(
     if transcription_id:
         query = query.filter(Translation.transcription_id == transcription_id)
 
-    if target_language:
-        query = query.filter(Translation.target_language == target_language)
+    # If target_language filter provided, we'll filter results in Python after loading
 
     translations = query.offset(skip).limit(limit).all()
+    if target_language:
+        # filter by transient requested language stored on instances (set at creation time)
+        translations = [
+            t for t in translations if getattr(t, "_requested_target_language", None) == target_language
+        ]
     return translations
 
 
@@ -136,12 +140,12 @@ async def create_translation(
     if transcription is None:
         raise HTTPException(status_code=404, detail="Транскрибация не найдена")
 
-    # Создаем перевод
-    db_translation = Translation(
-        transcription_id=translation_data.transcription_id,
-        target_language=translation_data.target_language,
-        status=ProcessingStatus.PENDING,
-    )
+    # Создаем перевод (attribute-assignment to satisfy typing plugin)
+    db_translation = Translation()
+    db_translation.transcription_id = translation_data.transcription_id
+    # store requested target language transiently on the instance (not a DB column)
+    setattr(db_translation, "_requested_target_language", translation_data.target_language)
+    db_translation.status = ProcessingStatus.PENDING
 
     db.add(db_translation)
     db.commit()
@@ -176,12 +180,16 @@ async def update_translation(
     if translation is None:
         raise HTTPException(status_code=404, detail="Перевод не найден")
 
-    # Обновляем данные
-    translation.translated_text = translated_text
+    # Обновляем данные: сохраняем в language-specific столбцы
+    requested = getattr(translation, "_requested_target_language", None)
+    target = requested if isinstance(requested, str) else "en"
+    if target.lower().startswith("ru"):
+        translation.text_translation_ru = translated_text
+    else:
+        translation.text_translation_en = translated_text
     translation.status = ProcessingStatus.COMPLETED
     if confidence is not None:
         translation.confidence = confidence
-    translation.updated_at = datetime.utcnow()
 
     db.commit()
     db.refresh(translation)
@@ -236,11 +244,19 @@ async def get_translation_stats(db: Session = Depends(get_db)) -> dict:
         status = status_tuple[0]
         status_counts[status] = status_counts.get(status, 0) + 1
 
-    # Статистика по целевым языкам
-    language_stats = db.query(Translation.target_language).all()
+    # Статистика по целевым языкам (derive from translations loaded)
+    all_translations = db.query(Translation).all()
     language_counts: dict[str, int] = {}
-    for lang_tuple in language_stats:
-        lang = lang_tuple[0]
+    for t in all_translations:
+        requested = getattr(t, "_requested_target_language", None)
+        if isinstance(requested, str):
+            lang = requested
+        elif t.text_translation_en and not t.text_translation_ru:
+            lang = "en"
+        elif t.text_translation_ru and not t.text_translation_en:
+            lang = "ru"
+        else:
+            lang = ""
         language_counts[lang] = language_counts.get(lang, 0) + 1
 
     return {

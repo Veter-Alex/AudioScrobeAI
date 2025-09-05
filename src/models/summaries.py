@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from typing import Optional, TYPE_CHECKING
 
-from sqlalchemy import Integer, String, Float, ForeignKey
+from sqlalchemy import Integer, String, Float, ForeignKey, DateTime, JSON
+from sqlalchemy.sql import func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.database import Base
 from src.models.enums import ProcessingStatus, ProcessingStatusType
@@ -38,7 +39,9 @@ class Summary(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     # При удалении перевода суммаризация удаляется каскадно
-    translation_id: Mapped[int] = mapped_column(Integer, ForeignKey('translations.id', ondelete="CASCADE"), index=True)
+    translation_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('translations.id', ondelete="CASCADE"), index=True, nullable=True)
+    # optional link to transcription if summary was created directly from transcription
+    transcription_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('transcriptions.id', ondelete="SET NULL"), index=True, nullable=True)
     ai_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('ai_models.id'), index=True)
     text_summary_en: Mapped[str] = mapped_column(String)
     text_summary_ru: Mapped[str] = mapped_column(String)
@@ -46,7 +49,21 @@ class Summary(Base):
     end_time: Mapped[float] = mapped_column(Float)  # in seconds
     status: Mapped[ProcessingStatus] = mapped_column(ProcessingStatusType)
     error_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    # Timestamps and optional confidence and summary fields
+    created_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now())
+    updated_at: Mapped[DateTime] = mapped_column(DateTime, default=func.now(), onupdate=func.now())
+    confidence: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    summary_text: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    summary_type: Mapped[str] = mapped_column(String)
+    # Key points stored as JSON array
+    key_points: Mapped[Optional[list[str]]] = mapped_column(JSON, nullable=True)
 
     # Relationships
-    translation: Mapped["Translation"] = relationship("Translation", back_populates="summaries")
-    ai_model: Mapped["AIModel"] = relationship("AIModel", back_populates="summaries")
+    translation: Mapped["Translation"] = relationship(
+        "Translation",
+        back_populates="summaries",
+    )
+    ai_model: Mapped["AIModel"] = relationship(
+        "AIModel",
+        back_populates="summaries",
+    )

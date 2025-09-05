@@ -4,7 +4,6 @@
 Этот модуль содержит эндпоинты для загрузки, обработки и управления аудиофайлами.
 """
 
-import os
 from datetime import datetime
 from typing import List, Optional
 
@@ -14,8 +13,9 @@ from sqlalchemy.orm import Session
 
 from src.database import get_db
 from src.models.audio_files import AudioFile
-from src.models.enums import Status
 from src.models.users import User
+from src.services.audio_service import AudioService
+from src.utils.fs import safe_remove
 
 # Создаем роутер для audio files эндпоинтов
 router = APIRouter()
@@ -125,25 +125,16 @@ async def create_audio_file(
     if user is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
-    # Создаем запись об аудиофайле
-    db_audio_file = AudioFile(
+    created = AudioService.create_audio_record(
+        db,
         filename=file_data.filename,
         original_filename=file_data.original_filename,
         file_size=file_data.file_size,
         duration=file_data.duration,
-        status=(
-            Status(file_data.status)
-            if hasattr(file_data, "status")
-            else Status("uploaded")
-        ),
         user_id=user_id,
+        status=file_data.status,
     )
-
-    db.add(db_audio_file)
-    db.commit()
-    db.refresh(db_audio_file)
-
-    return db_audio_file
+    return created
 
 
 @router.delete("/{file_id}")
@@ -165,13 +156,13 @@ async def delete_audio_file(file_id: int, db: Session = Depends(get_db)) -> dict
     if audio_file is None:
         raise HTTPException(status_code=404, detail="Аудиофайл не найден")
 
-    # Удаляем файл с диска, если он существует
-    if os.path.exists(audio_file.filename):
-        os.remove(audio_file.filename)
-
-    db.delete(audio_file)
-    db.commit()
-
+    # Удаляем файл с диска безопасно и удаляем запись
+    try:
+        safe_remove(audio_file.filename)
+    except Exception:
+        # не прерываем удаление записи, логирование можно добавить
+        pass
+    AudioService.delete_audio_record(db, file_id=file_id)
     return {"message": "Аудиофайл успешно удален"}
 
 
@@ -186,19 +177,4 @@ async def get_audio_stats(db: Session = Depends(get_db)) -> dict:
     Returns:
         dict: Статистика по аудиофайлам.
     """
-    total_files = db.query(AudioFile).count()
-    total_size = db.query(AudioFile).with_entities(AudioFile.file_size).all()
-    total_size_bytes = sum(size[0] for size in total_size if size[0])
-
-    # Статистика по статусам
-    status_stats = db.query(AudioFile.status, AudioFile.file_size).all()
-
-    return {
-        "total_files": total_files,
-        "total_size_bytes": total_size_bytes,
-        "total_size_mb": round(total_size_bytes / (1024 * 1024), 2),
-        "status_distribution": {
-            status: len([f for f, _ in status_stats if f == status])
-            for status in set(s[0] for s in status_stats)
-        },
-    }
+    return AudioService.get_stats(db)
